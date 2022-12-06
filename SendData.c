@@ -77,9 +77,7 @@ int checksumFile(char * file)
     close(first);
     return sum;
 }
-
-
-int main()
+int sendTCP()
 {
     int fd = open("largeData.txt",O_RDONLY);
     if(fd <0)
@@ -114,6 +112,7 @@ int main()
     char buffer[1024];
     int amountRead = read(fd,buffer,1024);
     int amounrWritten;
+    int check = 0;
     while(amountRead != 0)
     {
         amounrWritten = write(client_sock,buffer,1024);
@@ -122,8 +121,16 @@ int main()
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
-    printf("it took %f second to send data", time_taken);
+    printf("it took %f second to send data\n", time_taken);
+    check = checksumFile("largeData.txt");
+    printf("checksum: %d\n",check);
     close(client_sock);
     close(fd);
+    return 0;
+}
+
+int main()
+{
+    sendTCP();
     return 0;
 }

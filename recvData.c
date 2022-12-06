@@ -78,11 +78,9 @@ int checksumFile(char * file)
     close(first);
     return sum;
 }
-
-
-int main()
+int readTCP()
 {
-    int sock;
+     int sock;
     int acceptedSocket;
     struct sockaddr_in server;
     size_t len;
@@ -126,6 +124,7 @@ int main()
     clock_t t;
     t = clock();
     int amountRead = 0;
+    int check = 0;
     while((amountRead =read(acceptedSocket,buffer,1024)) != 0)
     {
         printf("read %d bytes\n",amountRead);
@@ -133,8 +132,16 @@ int main()
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
-    printf("it took %f second to recv data", time_taken);
+    printf("it took %f second to recv data\n", time_taken);
+    check = checksumFile("copied.txt");
+    printf("checksum: %d\n",check);
     close(accept);
     close(fd);
     return 0;
+}
+
+int main()
+{
+   readTCP();
+   return 0;
 }
