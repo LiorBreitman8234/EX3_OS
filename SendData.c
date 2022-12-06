@@ -16,6 +16,69 @@
 #include <arpa/inet.h>
 #include <time.h>
 
+
+int sumBin(int num) {
+
+    if (num == 0) {
+        return 0;
+    }
+   
+   // Stores binary representation of number.
+    int binaryNum[32]; // Assuming 32 bit integer.
+    int i=0;
+   
+    for ( ;num > 0; ){
+        binaryNum[i++] = num % 2;
+        num /= 2;
+    }
+    int sum=0;
+    for (int j = i-1; j >= 0; j--){
+        sum+=binaryNum[j];
+    }
+    return sum;
+   
+}
+int checksum(char* str){
+    int sum=0;
+    for (int i = 0; i < strlen(str); i++)
+    {
+        sum+=sumBin(str[i]);
+    }
+    return sum;
+    
+}
+int checksumFile(char * file)
+{    
+    int first = open(file,O_RDONLY);
+    if(first == -1)
+    {
+        perror("error opening first file: ");
+        return -1;
+    }
+    char data[1000];
+    int bytesRead,sum = 0; 
+    while(1)
+    {
+        bzero(data, 1000);
+        //reading the data and checking validity
+        bytesRead = read(first,data,1000);
+        if(bytesRead < 0)
+        {
+            close(first);
+            perror("Error while reading: ");
+            break;
+        }
+        else if(bytesRead == 0)
+        {
+            break;
+        }
+        sum+=checksum(data);
+    }
+    close(first);
+    return sum;
+}
+
+
 int main()
 {
     int fd = open("largeData.txt",O_RDONLY);
