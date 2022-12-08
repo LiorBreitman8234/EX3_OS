@@ -120,29 +120,29 @@ int readTCP()
 
     printf("socket conncted\n");
     char buffer[1024];
-    int fd = open("copiedTCP.txt",O_CREAT|O_WRONLY | O_TRUNC, S_IRWXU|S_IRWXG|S_IRWXO);
+    bzero(buffer,1024);
     clock_t t;
     t = clock();
     int amountRead = 0;
     int check = 0;
-    while((amountRead =read(acceptedSocket,buffer,1024)) != 0)
+    while((amountRead =read(acceptedSocket,buffer,1023)) != 0)
     {
-        write(fd,buffer,1024);
+        check += checksum(buffer);
+        memset(buffer,'\0',1024);
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to recv data\n", time_taken);
-    check = checksumFile("copiedTCP.txt");
-    printf("checksum for copiedTCP.txt: %d\n",check);
+    printf("checksum for text recived: %d\n",check);
     close(accept);
-    close(fd);
+    //close(fd);
     return 0;
 }
 int readUDP()
 {
     int sock;
     int acceptedSocket;
-    struct sockaddr_in6 server;
+    struct sockaddr_in6 server,client;
     size_t len;
     sock = socket(AF_INET6,SOCK_DGRAM,0);
     if(sock < 0)
@@ -153,6 +153,7 @@ int readUDP()
     }
     printf("opened socket\n");
     bzero(&server, sizeof(server));
+    bzero(&client, sizeof(client));
     server.sin6_family = AF_INET6;
     server.sin6_port = htons(0);
 
@@ -189,7 +190,7 @@ int readUDP()
 
 int main()
 {
-   //readTCP();
-   readUDP();
+   readTCP();
+   //readUDP();
    return 0;
 }

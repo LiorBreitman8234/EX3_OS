@@ -110,18 +110,19 @@ int sendTCP()
     clock_t t   ;
     t = clock();
     char buffer[1024];
-    int amountRead = read(fd,buffer,1024);
+    int amountRead = read(fd,buffer,1023);
     int amounrWritten;
     int check = 0;
     while(amountRead != 0)
     {
-        amounrWritten = write(client_sock,buffer,1024);
-        amountRead = read(fd,&buffer,1024);
+        check += checksum(buffer);
+        amounrWritten = write(client_sock,buffer,1023);
+        memset(buffer,'\0',1024);
+        amountRead = read(fd,buffer,1023);
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to send data\n", time_taken);
-    check = checksumFile("largeData.txt");
     printf("checksum: %d\n",check);
     close(client_sock);
     close(fd);
@@ -130,7 +131,7 @@ int sendTCP()
 
 int sendUDP()
 {
-    int fd = open("largeData.txt",O_RDONLY);
+    int fd = open("test.txt",O_RDONLY);
     if(fd <0)
     {
         perror("error opening file");
@@ -171,7 +172,7 @@ int sendUDP()
     int check = 0;
     while(amountRead != 0)
     {
-        amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin);
+        //amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin);
         if(amounrWritten == -1)
         {
             perror("error writing");
@@ -183,7 +184,7 @@ int sendUDP()
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to send data\n", time_taken);
-    check = checksumFile("largeData.txt");
+    check = checksumFile("test.txt");
     printf("checksum: %d\n",check);
     close(client_sock);
     close(fd);
@@ -193,7 +194,7 @@ int sendUDP()
 
 int main()
 {
-    //sendTCP();
-    sendUDP();
+    sendTCP();
+    //sendUDP();
     return 0;
 }
