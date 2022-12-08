@@ -116,6 +116,67 @@ int sendTCP()
     while(amountRead != 0)
     {
         amounrWritten = write(client_sock,buffer,1024);
+        amountRead = read(fd,&buffer,1024);
+    }
+    t = clock() - t;
+    double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
+    printf("it took %f second to send data\n", time_taken);
+    check = checksumFile("largeData.txt");
+    printf("checksum: %d\n",check);
+    close(client_sock);
+    close(fd);
+    return 0;
+}
+
+int sendUDP()
+{
+    int fd = open("largeData.txt",O_RDONLY);
+    if(fd <0)
+    {
+        perror("error opening file");
+        exit(1);
+    }
+    printf("opened file\n");
+    int client_sock;
+    struct sockaddr_in6 addr;
+    
+    client_sock = socket(AF_INET6,SOCK_DGRAM,0);
+    if(client_sock < 0)
+    {
+        perror("error opening socket");
+        close(client_sock);
+        exit(1);
+    }
+    printf("opend socket\n");
+    addr.sin6_port = htons(0);
+    addr.sin6_family = AF_INET6;
+    inet_pton(AF_INET6,"::1",&addr.sin6_addr);
+    // if(connect(client_sock,(struct sockaddr*)&addr,sizeof(addr)) < 0 ){
+    //     perror("error connecting");
+    //     exit(0);
+    // }
+    if(bind(client_sock,(struct sockaddr*)&addr,sizeof(addr)) < 0)
+    {
+        perror("error binding");
+        exit(1);
+    }
+
+    printf("connected socket\n");
+
+    clock_t t   ;
+    t = clock();
+    char buffer[1024];
+    int amountRead = read(fd,buffer,1024);
+    int amounrWritten;
+    int check = 0;
+    while(amountRead != 0)
+    {
+        amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin);
+        if(amounrWritten == -1)
+        {
+            perror("error writing");
+            exit(1);
+        }
         printf("wrote %d bytes\n",amounrWritten);
         amountRead = read(fd,&buffer,1024);
     }
@@ -129,8 +190,10 @@ int sendTCP()
     return 0;
 }
 
+
 int main()
 {
-    sendTCP();
+    //sendTCP();
+    sendUDP();
     return 0;
 }

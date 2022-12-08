@@ -120,12 +120,58 @@ int readTCP()
 
     printf("socket conncted\n");
     char buffer[1024];
-    int fd = open("copied.txt",O_CREAT|O_WRONLY | O_TRUNC, S_IRWXU|S_IRWXG|S_IRWXO);
+    int fd = open("copiedTCP.txt",O_CREAT|O_WRONLY | O_TRUNC, S_IRWXU|S_IRWXG|S_IRWXO);
     clock_t t;
     t = clock();
     int amountRead = 0;
     int check = 0;
     while((amountRead =read(acceptedSocket,buffer,1024)) != 0)
+    {
+        write(fd,buffer,1024);
+    }
+    t = clock() - t;
+    double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
+    printf("it took %f second to recv data\n", time_taken);
+    check = checksumFile("copiedTCP.txt");
+    printf("checksum for copiedTCP.txt: %d\n",check);
+    close(accept);
+    close(fd);
+    return 0;
+}
+int readUDP()
+{
+    int sock;
+    int acceptedSocket;
+    struct sockaddr_in6 server;
+    size_t len;
+    sock = socket(AF_INET6,SOCK_DGRAM,0);
+    if(sock < 0)
+    {
+        perror("error opening socket");
+        close(sock);
+        exit(1);
+    }
+    printf("opened socket\n");
+    bzero(&server, sizeof(server));
+    server.sin6_family = AF_INET6;
+    server.sin6_port = htons(0);
+
+    if(bind(sock, (struct sockaddr *) &server, sizeof(server))<0)
+    {
+        perror("error binding");
+        exit(1);
+    }
+    printf("binded socket\n");
+
+
+    char buffer[1024];
+    int fd = open("copiedUDP.txt",O_CREAT|O_WRONLY | O_TRUNC, S_IRWXU|S_IRWXG|S_IRWXO);
+    clock_t t;
+    t = clock();
+    int amountRead = 0;
+    int check = 0;
+    printf("before read loop\n");
+    while((amountRead =recv(sock,buffer,1024,0)) != 0)
     {
         printf("read %d bytes\n",amountRead);
         write(fd,buffer,1024);
@@ -133,15 +179,17 @@ int readTCP()
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to recv data\n", time_taken);
-    check = checksumFile("copied.txt");
-    printf("checksum: %d\n",check);
-    close(accept);
+    check = checksumFile("copiedUDP.txt");
+    printf("checksum for copiedUDP.txt: %d\n",check);
+    close(sock);
     close(fd);
     return 0;
 }
 
+
 int main()
 {
-   readTCP();
+   //readTCP();
+   readUDP();
    return 0;
 }
