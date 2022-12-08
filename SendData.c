@@ -171,7 +171,7 @@ int sendUDP()
     int check = 0;
     while(amountRead != 0)
     {
-        amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin);
+//        amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin6);
         if(amounrWritten == -1)
         {
             perror("error writing");

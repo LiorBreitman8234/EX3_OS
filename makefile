@@ -1,7 +1,19 @@
 CC=gcc
 FLAGS= -Wall -g
 
-all: send recv
+all: send recv dgramS dgramC
+
+dgramS.o: dgramS.c
+	$(CC) $(FLAGS) -c dgramS.c
+
+dgramS: dgramS.o
+	$(CC) $(FLAGS) -o dgramS dgramS.o
+
+dgramC.o: dgramC.c
+	$(CC) $(FLAGS) -c dgramC.c
+
+dgramC: dgramC.o
+	$(CC) $(FLAGS) -o dgramC dgramC.o
 
 SendData.o: SendData.c
 	$(CC) $(FLAGS) -c SendData.c
@@ -18,4 +30,4 @@ recv: recvData.o
 .PHONY: clean all 
 
 clean:
-	rm -f *.o *.a *.so send recv
+	rm -f *.o *.a *.so send recv dgramS dgramC
