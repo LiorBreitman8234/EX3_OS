@@ -13,8 +13,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/un.h>
+#include <sys/mman.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <sys/stat.h>
+
 
 
 int sumBin(int num) {
@@ -131,7 +134,7 @@ int sendTCP()
 
 int sendUDP()
 {
-    int fd = open("test.txt",O_RDONLY);
+    int fd = open("largeData.txt",O_RDONLY);
     if(fd <0)
     {
         perror("error opening file");
@@ -149,52 +152,63 @@ int sendUDP()
         exit(1);
     }
     printf("opend socket\n");
-    addr.sin6_port = htons(0);
     addr.sin6_family = AF_INET6;
-    inet_pton(AF_INET6,"::1",&addr.sin6_addr);
-    // if(connect(client_sock,(struct sockaddr*)&addr,sizeof(addr)) < 0 ){
-    //     perror("error connecting");
-    //     exit(0);
-    // }
-    if(bind(client_sock,(struct sockaddr*)&addr,sizeof(addr)) < 0)
-    {
-        perror("error binding");
-        exit(1);
-    }
-
+    addr.sin6_port = htons(12345);
+    addr.sin6_addr = in6addr_any;
+    
     printf("connected socket\n");
 
     clock_t t   ;
     t = clock();
     char buffer[1024];
-    int amountRead = read(fd,buffer,1024);
+    int amountRead = 0;
     int amounrWritten;
     int check = 0;
-    while(amountRead != 0)
+    int bufferAmount = 0;
+    while((amountRead  = read(fd,buffer,1023))!= 0)
     {
-        //amounrWritten = sendto(client_sock,buffer,1024,0,(struct sockaddr*)addr.sin);
-        if(amounrWritten == -1)
-        {
-            perror("error writing");
-            exit(1);
-        }
-        printf("wrote %d bytes\n",amounrWritten);
-        amountRead = read(fd,&buffer,1024);
+        check += checksum(buffer);
+        amounrWritten = sendto(client_sock,&buffer,1023,0,(const struct sockaddr*)&addr,sizeof(addr));
+        memset(buffer,'\0',1024);
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to send data\n", time_taken);
-    check = checksumFile("test.txt");
     printf("checksum: %d\n",check);
+    sendto(client_sock,"",0,0,(const struct sockaddr*)&addr,sizeof(addr));
     close(client_sock);
     close(fd);
     return 0;
 }
 
+sendMMAP()
+{
+    int fd = open("largeData.txt",O_RDONLY);
+    if(fd <0)
+    {
+        perror("error opening file");
+        exit(1);
+    }
+    printf("opened file\n");
+    struct stat st;
+    if(fstat(fd,&st) == -1)
+    {
+        perror("erorr st\n");
+        exit(1);
+    }
+    size_t file_size = st.st_size;
+    char* addr = (NULL,file_size,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    if(addr == MAP_FAILED)
+    {
+        perror("falied mapping");
+        exit(1);
+    }
+}
+
 
 int main()
 {
-    sendTCP();
-    //sendUDP();
+    //sendTCP();
+    sendUDP();
     return 0;
 }

@@ -143,7 +143,6 @@ int readUDP()
     int sock;
     int acceptedSocket;
     struct sockaddr_in6 server,client;
-    size_t len;
     sock = socket(AF_INET6,SOCK_DGRAM,0);
     if(sock < 0)
     {
@@ -155,42 +154,39 @@ int readUDP()
     bzero(&server, sizeof(server));
     bzero(&client, sizeof(client));
     server.sin6_family = AF_INET6;
-    server.sin6_port = htons(0);
-
+    server.sin6_port = htons(12345);
+    server.sin6_addr = in6addr_any;
     if(bind(sock, (struct sockaddr *) &server, sizeof(server))<0)
     {
         perror("error binding");
         exit(1);
     }
     printf("binded socket\n");
-
-
+    socklen_t len = sizeof(client);
     char buffer[1024];
-    int fd = open("copiedUDP.txt",O_CREAT|O_WRONLY | O_TRUNC, S_IRWXU|S_IRWXG|S_IRWXO);
     clock_t t;
     t = clock();
     int amountRead = 0;
     int check = 0;
     printf("before read loop\n");
-    while((amountRead =recv(sock,buffer,1024,0)) != 0)
+    while((amountRead= recvfrom(sock,&buffer,1023,0,(const struct sockaddr*)&client,&len)) > 0)
     {
-        printf("read %d bytes\n",amountRead);
-        write(fd,buffer,1024);
+        check += checksum(buffer);
+        bzero(buffer,1024);
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds
     printf("it took %f second to recv data\n", time_taken);
-    check = checksumFile("copiedUDP.txt");
-    printf("checksum for copiedUDP.txt: %d\n",check);
+    printf("checksum for transfered data: %d\n",check);
     close(sock);
-    close(fd);
     return 0;
 }
 
 
+
 int main()
 {
-   readTCP();
-   //readUDP();
+   //readTCP();
+   readUDP();
    return 0;
 }
