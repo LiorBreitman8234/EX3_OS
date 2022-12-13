@@ -16,6 +16,7 @@
 #include <sys/mman.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <pthread.h>
 #include <sys/stat.h>
 
 
@@ -43,8 +44,9 @@ int sumBin(int num) {
 }
 int checksum(char* str){
     int sum=0;
-    for (int i = 0; i < strlen(str); i++)
-    {
+    int length = strlen(str);
+    for (int i = 0; i < length; i++)
+    {   
         sum+=sumBin(str[i]);
     }
     return sum;
@@ -110,7 +112,7 @@ int sendTCP()
 
     printf("connected socket\n");
 
-    clock_t t   ;
+    clock_t t;
     t = clock();
     char buffer[1024];
     int amountRead = read(fd,buffer,1023);
@@ -158,7 +160,7 @@ int sendUDP()
     
     printf("connected socket\n");
 
-    clock_t t   ;
+    clock_t t;
     t = clock();
     char buffer[1024];
     int amountRead = 0;
@@ -181,10 +183,12 @@ int sendUDP()
     return 0;
 }
 
-sendMMAP()
+checkMMAP()
 {
-    int fd = open("largeData.txt",O_RDONLY);
-    if(fd <0)
+    int fd = open("largeData.txt",O_RDWR);
+
+    printf("checksumFile: %d\n",checksumFile("largeData.txt"));
+    if(fd < 0)
     {
         perror("error opening file");
         exit(1);
@@ -197,18 +201,143 @@ sendMMAP()
         exit(1);
     }
     size_t file_size = st.st_size;
-    char* addr = (NULL,file_size,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    clock_t tWrite;
+    tWrite = clock();
+    char* addr = mmap(0,file_size,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
     if(addr == MAP_FAILED)
     {
         perror("falied mapping");
         exit(1);
     }
+    tWrite = clock() - tWrite;
+    double time_taken = ((double)tWrite)/CLOCKS_PER_SEC; // in seconds
+    //printf("string : %s, len: %d\n",addr,strlen(addr));
+    printf("time to write file: %f\n", time_taken);
+    printf("length: %ld\n",strlen(addr));
+    //printf("write checksum: %d\n",checksum(addr));
+  
+    int fork_id = fork();
+    if(fork_id == -1)
+    {
+        perror("error opening process");
+        exit(1);
+    }
+    if(fork_id == 0)
+    {
+        clock_t tRead;
+        printf("in child\n");
+        char toCopy[1024];
+        tRead = clock();
+        int index = 0;
+        int check = 0;
+        while(index <= file_size)
+        {
+            bzero(toCopy,1023);
+            for(int i = 0; i < 1023;i++)
+            {   
+                if(index > file_size)
+                {
+                    break;
+                }
+                toCopy[i] = addr[index];
+                index++; 
+            }
+            check += checksum(toCopy);
+        }
+        tRead = clock() - tRead;
+        printf("index: %d\n",index);
+        double time_taken = ((double)tRead)/CLOCKS_PER_SEC; // in seconds
+        printf("time to read file: %f\n", time_taken);
+        printf("read checksum: %d\n",check);
+    }
+    else
+    {
+        waitpid(fork_id,NULL,0);
+    }
+    close(fd);
+    munmap(addr,file_size);
+    return 0;
+    
+
 }
 
+size_t file_size;
+int thread_fd;
+pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
+int check = 0;
+int ThreadIndex = 0;
+char* ThreadBuffer;
+void* threadFunc_1(void* args)
+{
+    printf("first thread func\n");
+    thread_fd = open("test.txt",O_RDONLY);
+    if(thread_fd < 0)
+    {
+        perror("error opening file");
+        exit(1);
+    }
+    printf("opened file\n");
+    struct stat st;
+    
+    if(fstat(thread_fd,&st) == -1)
+    {
+        perror("erorr st\n");
+        exit(1);
+    }
+    file_size = st.st_size; 
+    ThreadBuffer= (char*)calloc(file_size,sizeof(char));
+    int amount_read = 0;
+    pthread_mutex_lock(&file_mutex);
+    while(ThreadIndex < file_size)
+    {
+        amount_read = read(thread_fd,ThreadBuffer+ThreadIndex,1023);
+        if(amount_read < 0)
+        {
+            perror("error reading");
+            exit(1);
+        }
+        ThreadIndex += amount_read;
+    }
+    
+    pthread_mutex_unlock(&file_mutex);
+}
+void* threadFunc_2(void* args){
+    printf("second thread func\n");
+    pthread_mutex_lock(&file_mutex);
+    check = checksum(ThreadBuffer);
+    int fileCheck = checksumFile("largeData.txt");
+    if(check == fileCheck)
+    {
+        printf("file written successfully\n");
+    }
+    else
+    {
+        printf("-1");
+    }
+    pthread_mutex_unlock(&file_mutex);
+}
+
+
+
+void threadCheck()
+{
+    pthread_t thread1, thread2;
+    int check1,check2;
+    printf("in thread func\n");
+    check1 = pthread_create(&thread1, NULL, threadFunc_1,NULL);
+    check2 = pthread_create(&thread2, NULL, threadFunc_2,NULL);
+
+    pthread_join(thread1,NULL);
+    pthread_join(thread2,NULL);
+    printf("thread 1 returned: %d\n",check1);
+    printf("thread 2 returned: %d\n",check2);    
+}
 
 int main()
 {
     //sendTCP();
-    sendUDP();
+    //sendUDP();
+    //checkMMAP();
+    threadCheck();
     return 0;
 }

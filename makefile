@@ -16,7 +16,7 @@ dgramC: dgramC.o
 	$(CC) $(FLAGS) -o dgramC dgramC.o
 
 SendData.o: SendData.c
-	$(CC) $(FLAGS) -c SendData.c
+	$(CC) $(FLAGS) -c SendData.c -lpthread
 
 send: SendData.o
 	$(CC) $(FLAGS) -o send SendData.o 
