@@ -264,13 +264,14 @@ checkMMAP()
 size_t file_size;
 int thread_fd;
 pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
-int check = 0;
-int ThreadIndex = 0;
-char* ThreadBuffer;
+char ThreadBuffer[1000000000];
 void* threadFunc_1(void* args)
 {
+    int ThreadIndex = 0;
     printf("first thread func\n");
-    thread_fd = open("test.txt",O_RDONLY);
+    pthread_mutex_lock(&file_mutex);
+
+    thread_fd = open("largeData.txt",O_RDONLY);
     if(thread_fd < 0)
     {
         perror("error opening file");
@@ -285,36 +286,38 @@ void* threadFunc_1(void* args)
         exit(1);
     }
     file_size = st.st_size; 
-    ThreadBuffer= (char*)calloc(file_size,sizeof(char));
     int amount_read = 0;
-    pthread_mutex_lock(&file_mutex);
     while(ThreadIndex < file_size)
     {
-        amount_read = read(thread_fd,ThreadBuffer+ThreadIndex,1023);
+        pthread_mutex_trylock(&file_mutex);
+        amount_read = read(thread_fd,ThreadBuffer,1000000000-1);
         if(amount_read < 0)
         {
             perror("error reading");
             exit(1);
         }
         ThreadIndex += amount_read;
+        printf("amount written: %d\n",ThreadIndex);
+        pthread_mutex_unlock(&file_mutex);
     }
     
-    pthread_mutex_unlock(&file_mutex);
+    
+    return 0;
 }
 void* threadFunc_2(void* args){
+    sleep(0.001);
+    int amountRead = 0;
+    int checkRead = 0;
     printf("second thread func\n");
-    pthread_mutex_lock(&file_mutex);
-    check = checksum(ThreadBuffer);
-    int fileCheck = checksumFile("largeData.txt");
-    if(check == fileCheck)
+    while(amountRead < file_size)
     {
-        printf("file written successfully\n");
+        pthread_mutex_lock(&file_mutex);
+        checkRead += checksum(ThreadBuffer);
+        amountRead+= strlen(ThreadBuffer);
+        printf("current amount read from buffer: %d\n",amountRead);
+        pthread_mutex_unlock(&file_mutex);
     }
-    else
-    {
-        printf("-1");
-    }
-    pthread_mutex_unlock(&file_mutex);
+    printf("final checksum: %d\n",checkRead);
 }
 
 
@@ -339,5 +342,7 @@ int main()
     //sendUDP();
     //checkMMAP();
     threadCheck();
+    printf("actual checksum: %d\n",checksumFile("largeData.txt"));
+
     return 0;
 }

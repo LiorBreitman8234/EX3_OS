@@ -166,11 +166,14 @@ int readUDP()
     char buffer[1024];
     clock_t t;
     t = clock();
+    int overall = 0;
     int amountRead = 0;
     int check = 0;
     printf("before read loop\n");
     while((amountRead= recvfrom(sock,&buffer,1023,0,(const struct sockaddr*)&client,&len)) > 0)
     {
+        overall+= amountRead;
+        printf("amound read: %d\n",overall);
         check += checksum(buffer);
         bzero(buffer,1024);
     }
